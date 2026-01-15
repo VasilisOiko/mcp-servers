@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  antd-mcp:
+    build:
+      context: ./antd-mcp
+      dockerfile: Dockerfile
+    image: antd-mcp-server
+    container_name: antd-mcp-server
+    ports:
+      - "10000:3000"
+    stdin_open: true
+    tty: true
+    # MCP servers use stdio, so we keep stdin/stdout open
+    volumes:
+      # Optional: mount data directory if you've extracted Ant Design docs
+      - ./antd-data:/app/data
