@@ -8,65 +8,58 @@ This repository contains a Docker setup for running the MCP (Model Context Proto
 
 ## Quick Start
 
-### Build Individual Docker Images
+See [QUICK_START.md](./QUICK_START.md) for the fastest way to get started.
 
-#### Ant Design MCP Server
-
-```bash
-cd antd-mcp
-docker build -t antd-mcp-server .
-```
-
-### Run Individual Servers
-
-#### Ant Design MCP Server
+### Build and Start as Persistent Service
 
 ```bash
-docker run -it -p 10000:3000 antd-mcp-server
+# Build the image
+docker compose build antd-mcp
+
+# Start the container in detached mode (runs in background)
+docker compose up -d antd-mcp
 ```
 
-## Using Docker Compose
-
-### Build and start the server
-
-```bash
-docker-compose build
-docker-compose up
-```
-
-The server will be accessible on:
-- **Ant Design MCP**: `localhost:10000`
+The container runs persistently and can be accessed via Docker exec for MCP communication.
 
 ## Ant Design Documentation Extraction
 
-The Ant Design MCP server requires documentation to be extracted from the Ant Design repository before use. You can do this in two ways:
+The Ant Design documentation is automatically extracted during the Docker build process. The extracted documentation is included in the Docker image, so no additional steps are required.
 
-### Option 1: Extract during build (uncomment in Dockerfile)
+**Note:** The build process will clone the Ant Design repository to extract documentation, which may take a few minutes during the initial build.
 
-Edit `antd-mcp/Dockerfile` and uncomment the extraction step, then rebuild:
+### Optional: Using Custom Extracted Data
 
-```dockerfile
-RUN git clone https://github.com/ant-design/ant-design.git /tmp/ant-design && \
-    npm run extract /tmp/ant-design
-```
-
-Then rebuild:
-```bash
-cd antd-mcp
-docker build -t antd-mcp-server .
-```
-
-### Option 2: Extract at runtime
+If you prefer to extract documentation manually or use a custom version, you can mount a volume with your own extracted data:
 
 ```bash
-# Run a temporary container to extract docs
+# Extract docs manually (if needed)
 docker run -it --rm -v $(pwd)/antd-data:/app/data antd-mcp-server sh -c "
   git clone https://github.com/ant-design/ant-design.git /tmp/ant-design && \
   npm run extract /tmp/ant-design
 "
 
-# Then run with the extracted data mounted
+# Run with custom data mounted (uncomment volume in docker-compose.yml)
 docker run -it -v $(pwd)/antd-data:/app/data antd-mcp-server
+```
+
+## Integration with Cursor IDE
+
+To use this MCP server with Cursor, see [QUICK_START.md](./QUICK_START.md) for detailed instructions.
+
+### Quick Configuration
+
+Add to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "antd-components": {
+      "command": "docker",
+      "args": ["exec", "-i", "antd-mcp-server", "npm", "start"]
+    }
+  }
+}
 ```
 
 ## Integration with Claude Desktop
@@ -86,7 +79,7 @@ To use these MCP servers with Claude Desktop, configure them in your `claude_des
   "mcpServers": {
     "Ant Design Components": {
       "command": "docker",
-      "args": ["run", "-i", "antd-mcp-server"]
+      "args": ["exec", "-i", "antd-mcp-server", "npm", "start"]
     }
   }
 }
@@ -100,7 +93,8 @@ MCP-servers/
 │   ├── Dockerfile
 │   └── .dockerignore
 ├── docker-compose.yml
-└── README.md
+├── README.md
+└── QUICK_START.md
 ```
 
 ## Notes

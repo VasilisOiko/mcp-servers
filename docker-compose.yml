@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   antd-mcp:
     build:
@@ -11,7 +9,8 @@ services:
       - "10000:3000"
     stdin_open: true
     tty: true
+    restart: unless-stopped
     # MCP servers use stdio, so we keep stdin/stdout open
-    volumes:
-      # Optional: mount data directory if you've extracted Ant Design docs
-      - ./antd-data:/app/data
+    # Data is included in the image, but you can override with a volume if needed:
+    # volumes:
+    #   - ./antd-data:/app/data

@@ -13,15 +13,17 @@ WORKDIR /app
 RUN git clone https://github.com/hannesj/mcp-antd-components.git . && \
     npm install
 
-# Note: Ant Design MCP requires documentation extraction
-# This step requires cloning the Ant Design repo first
-# Uncomment and adjust the path if you want to extract docs during build:
-# RUN git clone https://github.com/ant-design/ant-design.git /tmp/ant-design && \
-#     npm run extract /tmp/ant-design || echo "Extraction skipped - run manually if needed"
+# Extract Ant Design documentation
+# Clone the Ant Design repository and extract documentation
+RUN git clone https://github.com/ant-design/ant-design.git /tmp/ant-design && \
+    node scripts/extract-docs.mjs /tmp/ant-design && \
+    rm -rf /tmp/ant-design && \
+    test -d /app/data || (echo "Error: Data directory was not created" && exit 1) && \
+    test "$(ls -A /app/data)" || (echo "Error: Data directory is empty" && exit 1)
 
 # MCP servers communicate via stdio, no port needed
 # But keeping this for potential HTTP-based usage
 EXPOSE 3000
 
 # Start the MCP server
-CMD ["node", "index.mjs"]
+CMD ["npm", "start"]
