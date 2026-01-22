@@ -1,26 +1,34 @@
 # MCP Server Docker Setup
 
-This repository contains a Docker setup for running the MCP (Model Context Protocol) server for Ant Design components.
+This repository contains a Docker setup for running multiple MCP (Model Context Protocol) servers.
 
-## Included Server
+## Included Servers
 
-**Ant Design MCP Server** - [hannesj/mcp-antd-components](https://github.com/hannesj/mcp-antd-components)
+1. **Ant Design MCP Server** - [hannesj/mcp-antd-components](https://github.com/hannesj/mcp-antd-components)
+   - Provides Ant Design component documentation, props, and examples
+
+2. **BullMQ MCP Server** - [adamhancock/bullmq-mcp](https://lobechat.com/discover/mcp/adamhancock-bullmq-mcp)
+   - Provides tools for managing BullMQ job queues
 
 ## Quick Start
 
 See [QUICK_START.md](./QUICK_START.md) for the fastest way to get started.
 
-### Build and Start as Persistent Service
+### Build and Start All Services
 
 ```bash
-# Build the image
-docker compose build antd-mcp
+# Build all images
+docker compose build
 
-# Start the container in detached mode (runs in background)
+# Start all containers in detached mode (runs in background)
+docker compose up -d
+
+# Or start specific services
 docker compose up -d antd-mcp
+docker compose up -d bullmq-mcp
 ```
 
-The container runs persistently and can be accessed via Docker exec for MCP communication.
+The containers run persistently and can be accessed via Docker exec for MCP communication.
 
 ## Ant Design Documentation Extraction
 
@@ -45,7 +53,7 @@ docker run -it -v $(pwd)/antd-data:/app/data antd-mcp-server
 
 ## Integration with Cursor IDE
 
-To use this MCP server with Cursor, see [QUICK_START.md](./QUICK_START.md) for detailed instructions.
+For complete MCP configuration instructions, see [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md).
 
 ### Quick Configuration
 
@@ -57,10 +65,16 @@ Add to `~/.cursor/mcp.json`:
     "antd-components": {
       "command": "docker",
       "args": ["exec", "-i", "antd-mcp-server", "npm", "start"]
+    },
+    "bullmq": {
+      "command": "docker",
+      "args": ["exec", "-i", "bullmq-mcp-server", "npx", "-y", "@adamhancock/bullmq-mcp"]
     }
   }
 }
 ```
+
+See [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md) for detailed setup instructions and troubleshooting.
 
 ## Integration with Claude Desktop
 
@@ -80,6 +94,10 @@ To use these MCP servers with Claude Desktop, configure them in your `claude_des
     "Ant Design Components": {
       "command": "docker",
       "args": ["exec", "-i", "antd-mcp-server", "npm", "start"]
+    },
+    "BullMQ": {
+      "command": "docker",
+      "args": ["exec", "-i", "bullmq-mcp-server", "npx", "-y", "@adamhancock/bullmq-mcp"]
     }
   }
 }
@@ -92,10 +110,20 @@ MCP-servers/
 ├── antd-mcp/
 │   ├── Dockerfile
 │   └── .dockerignore
+├── bullmq-mcp/
+│   ├── Dockerfile
+│   └── .dockerignore
 ├── docker-compose.yml
 ├── README.md
-└── QUICK_START.md
+├── QUICK_START.md
+└── MCP_CONFIGURATION.md
 ```
+
+## Documentation
+
+- **[README.md](./README.md)** - This file, overview of the project
+- **[QUICK_START.md](./QUICK_START.md)** - Quick deployment guide
+- **[MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md)** - Complete MCP configuration guide with mcp.json setup
 
 ## Notes
 

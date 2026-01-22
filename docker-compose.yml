@@ -14,3 +14,16 @@ services:
     # Data is included in the image, but you can override with a volume if needed:
     # volumes:
     #   - ./antd-data:/app/data
+
+  bullmq-mcp:
+    build:
+      context: ./bullmq-mcp
+      dockerfile: Dockerfile
+    image: bullmq-mcp-server
+    container_name: bullmq-mcp-server
+    ports:
+      - "10001:3000"
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    # MCP servers use stdio, so we keep stdin/stdout open
