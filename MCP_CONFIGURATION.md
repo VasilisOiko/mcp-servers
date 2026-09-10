@@ -1,204 +1,80 @@
 # MCP Server Configuration Guide
 
-This guide explains how to configure the MCP servers (Ant Design and BullMQ) in Cursor IDE.
+How to point Cursor / Claude Code at the five containers managed by this
+repo's `docker-compose.yml`: `context7-mcp`, `grafana-mcp`, `mongodb-mcp`,
+`sonarqube-mcp`, `playwright-mcp`.
 
 ## Prerequisites
 
 - Docker installed and running
-- Cursor IDE installed
-- Both MCP server containers built and running
+- Each service's secrets filled in (see [QUICK_START.md](./QUICK_START.md))
+- All five containers built and running: `docker compose up -d`
 
-## Build and Start Services
+## Exec commands per server
 
-For detailed build and deployment instructions, see [QUICK_START.md](./QUICK_START.md).
+`docker exec` does not honor a container's `ENTRYPOINT`/`CMD`, so the
+exact command must be given explicitly:
 
-**Quick reference:**
-```bash
-cd /Users/vasilisoikonomou/Projects/MCP-servers
-docker compose build
-docker compose up -d
-docker compose ps  # Verify both are running
-```
-
-You should see both `antd-mcp-server` and `bullmq-mcp-server` running.
+| Server | Container | Exec command |
+|---|---|---|
+| context7 | `context7-mcp-server` | `node dist/index.js` |
+| grafana | `grafana-mcp-server` | `/app/mcp-grafana --transport stdio` |
+| mongodb | `mongodb-mcp-server` | `mongodb-mcp-server` |
+| sonarqube | `sonarqube-mcp-server` | `java -jar /app/sonarqube-mcp-server.jar` |
+| playwright | `playwright-mcp-server` | `node /app/cli.js --headless --browser chromium --no-sandbox` |
 
 ## Cursor MCP Configuration
 
-### Configuration File Location
-
-The MCP configuration file location depends on your operating system:
-
-- **macOS/Linux**: `~/.cursor/mcp.json`
-- **Windows**: `%USERPROFILE%\.cursor\mcp.json`
-
-### Create or Edit the Configuration File
-
-1. **Create the directory** (if it doesn't exist):
-   ```bash
-   # macOS/Linux
-   mkdir -p ~/.cursor
-   
-   # Windows (PowerShell)
-   New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.cursor"
-   ```
-
-2. **Create or edit the `mcp.json` file** with the following configuration:
+**Config file location:**
+- macOS/Linux: `~/.cursor/mcp.json`
+- Windows: `%USERPROFILE%\.cursor\mcp.json`
 
 ```json
 {
   "mcpServers": {
-    "antd-components": {
-      "command": "docker",
-      "args": ["exec", "-i", "antd-mcp-server", "npm", "start"]
-    },
-    "bullmq": {
-      "command": "docker",
-      "args": ["exec", "-i", "bullmq-mcp-server", "npx", "-y", "@adamhancock/bullmq-mcp"]
-    }
+    "context7": { "command": "docker", "args": ["exec", "-i", "context7-mcp-server", "node", "dist/index.js"] },
+    "grafana": { "command": "docker", "args": ["exec", "-i", "grafana-mcp-server", "/app/mcp-grafana", "--transport", "stdio"] },
+    "mongodb": { "command": "docker", "args": ["exec", "-i", "mongodb-mcp-server", "mongodb-mcp-server"] },
+    "sonarqube": { "command": "docker", "args": ["exec", "-i", "sonarqube-mcp-server", "java", "-jar", "/app/sonarqube-mcp-server.jar"] },
+    "playwright": { "command": "docker", "args": ["exec", "-i", "playwright-mcp-server", "node", "/app/cli.js", "--headless", "--browser", "chromium", "--no-sandbox"] }
   }
 }
 ```
 
-### Configuration Explanation
+`-i` keeps stdin open, which MCP's stdio transport requires.
 
-#### Ant Design MCP Server
-- **Name**: `antd-components`
-- **Command**: `docker exec -i antd-mcp-server npm start`
-- **Purpose**: Provides access to Ant Design component documentation, props, and examples
+## Claude Code Configuration
 
-#### BullMQ MCP Server
-- **Name**: `bullmq`
-- **Command**: `docker exec -i bullmq-mcp-server npx -y @adamhancock/bullmq-mcp`
-- **Purpose**: Provides tools for managing BullMQ job queues
-
-**Important flags:**
-- `-i`: Keeps stdin open (required for MCP stdio communication)
-- `exec`: Runs a command in the running container
-- `-y` (for BullMQ): Automatically answers yes to npx prompts
-
-## Complete Example Configuration
-
-If you have other MCP servers configured, your `mcp.json` might look like this:
-
-```json
-{
-  "mcpServers": {
-    "shadcn": {
-      "command": "npx",
-      "args": ["shadcn@latest", "mcp"]
-    },
-    "zustand Docs": {
-      "url": "https://gitmcp.io/pmndrs/zustand"
-    },
-    "antd-components": {
-      "command": "docker",
-      "args": ["exec", "-i", "antd-mcp-server", "npm", "start"]
-    },
-    "bullmq": {
-      "command": "docker",
-      "args": ["exec", "-i", "bullmq-mcp-server", "npx", "-y", "@adamhancock/bullmq-mcp"]
-    }
-  }
-}
+```bash
+claude mcp add context7 --scope user -- docker exec -i context7-mcp-server node dist/index.js
+claude mcp add grafana --scope user -- docker exec -i grafana-mcp-server /app/mcp-grafana --transport stdio
+claude mcp add mongodb --scope user -- docker exec -i mongodb-mcp-server mongodb-mcp-server
+claude mcp add sonarqube --scope user -- docker exec -i sonarqube-mcp-server java -jar /app/sonarqube-mcp-server.jar
+claude mcp add playwright --scope user -- docker exec -i playwright-mcp-server node /app/cli.js --headless --browser chromium --no-sandbox
 ```
+
+Check `claude mcp add --help` first — flags have moved between versions.
 
 ## After Configuration
 
-1. **Restart Cursor IDE** completely (quit and reopen) to load the new MCP servers
-2. **Verify the servers are loaded** by checking Cursor's MCP status or trying to use the tools
-
-## Testing the Configuration
-
-### Test Ant Design MCP Server
-
-Ask Cursor questions like:
-- "What Ant Design components are available?"
-- "Show me the Button component documentation"
-- "What props does the Table component accept?"
-- "Show me code examples for the Modal component"
-
-### Test BullMQ MCP Server
-
-Ask Cursor questions like:
-- "List all BullMQ queues"
-- "Show me the status of a queue"
-- "What tools are available for BullMQ?"
+1. Restart Cursor / Claude Code completely to load the new MCP servers.
+2. Verify each server responds (see the manual `docker exec` check in
+   [QUICK_START.md](./QUICK_START.md)) before relying on it.
 
 ## Troubleshooting
 
-### Container Issues
+### Container issues
+See [QUICK_START.md](./QUICK_START.md) for start/stop/logs/rebuild
+commands.
 
-For container-related troubleshooting (won't start, can't connect, rebuild issues), see [QUICK_START.md](./QUICK_START.md).
+### Server not found in Cursor / Claude Code
+1. Confirm containers are running: `docker compose ps`
+2. Confirm container names match exactly (`context7-mcp-server`,
+   `grafana-mcp-server`, `mongodb-mcp-server`, `sonarqube-mcp-server`,
+   `playwright-mcp-server`)
+3. Check `mcp.json` JSON syntax is valid
+4. Restart Cursor / Claude Code completely
 
-### Server Not Found in Cursor
-
-If Cursor can't find the servers:
-
-1. **Verify containers are running**:
-   ```bash
-   docker ps | grep -E "antd-mcp|bullmq-mcp"
-   ```
-
-2. **Check container names match**:
-   - `antd-mcp-server`
-   - `bullmq-mcp-server`
-
-3. **Verify Docker is accessible** from Cursor
-
-4. **Check JSON syntax** is valid (use a JSON validator)
-
-### Configuration Not Loading
-
-- Make sure the `mcp.json` file is in the correct location
-- Verify the JSON syntax is valid (no trailing commas, proper quotes)
-- Restart Cursor completely (quit and reopen)
-- Check Cursor's logs for MCP-related errors
-
-### BullMQ Package Name Issues
-
-If the BullMQ server fails to start, the package name might be different. Check the [LobeChat deployment page](https://lobechat.com/discover/mcp/adamhancock-bullmq-mcp?activeTab=deployment) for the correct package name and update:
-
-1. The `CMD` in `bullmq-mcp/Dockerfile`
-2. The `args` in your `mcp.json` configuration
-
-## Managing the Services
-
-For service management commands (start, stop, restart, logs, rebuild), see [QUICK_START.md](./QUICK_START.md).
-
-**Quick reference:**
-- Start: `docker compose up -d`
-- Stop: `docker compose stop`
-- Restart: `docker compose restart`
-- Logs: `docker compose logs -f [service-name]`
-- Rebuild: `docker compose down && docker compose build --no-cache && docker compose up -d`
-
-## Available MCP Tools
-
-### Ant Design MCP Server Tools
-- `list-components`: Lists all available Ant Design components
-- `get-component-props`: Gets props and API documentation for a component
-- `get-component-docs`: Gets detailed documentation for a component
-- `list-component-examples`: Lists examples for a component
-- `get-component-example`: Gets code for a specific example
-- `search-components`: Search for components by name pattern
-
-### BullMQ MCP Server Tools
-Refer to the [BullMQ MCP documentation](https://lobechat.com/discover/mcp/adamhancock-bullmq-mcp) for available tools. Common tools include:
-- Queue management
-- Job status and monitoring
-- Queue statistics
-- Job operations (add, remove, retry, etc.)
-
-## Notes
-
-For important notes about MCP communication (stdio, persistent containers, ports), see [QUICK_START.md](./QUICK_START.md).
-
-**Configuration-specific notes:**
-- The `-i` flag is **required** for Docker exec to keep stdin open
-- Container names must match exactly: `antd-mcp-server` and `bullmq-mcp-server`
-
-## Additional Resources
-
-- [Ant Design MCP Server](https://github.com/hannesj/mcp-antd-components)
-- [BullMQ MCP Server](https://lobechat.com/discover/mcp/adamhancock-bullmq-mcp)
-- [MCP Protocol Documentation](https://modelcontextprotocol.io/)
+### A server exits immediately instead of waiting on stdio
+Its `.env` is likely missing/wrong (bad API key, unreachable URL, malformed
+connection string) — check `docker compose logs <service>`.

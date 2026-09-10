@@ -1,96 +1,74 @@
-# Quick Start: Deploy Ant Design MCP Server in Docker
+# Quick Start
 
-## Deploy as Persistent Docker Service
+## 1. Fill in secrets
 
-### 1. Build and Start the Container
+Each service that needs one keeps its own gitignored `.env` file. Copy the
+`.env.example` in each directory and fill in real values:
 
 ```bash
 cd /Users/vasilisoikonomou/Projects/MCP-servers
 
-# Build the image
-docker compose build antd-mcp
-
-# Start the container in detached mode (runs in background)
-docker compose up -d antd-mcp
+# grafana-mcp/.env      → GRAFANA_API_KEY=
+# mongodb-mcp/.env      → MDB_MCP_CONNECTION_STRING=
+# sonarqube-mcp/.env    → SONARQUBE_TOKEN=
+# playwright-mcp/.env   → TEST_USER_A_EMAIL / _PASSWORD, TEST_USER_B_EMAIL / _PASSWORD (optional)
 ```
 
-### 2. Verify It's Running
+`context7-mcp` needs no secrets.
+
+## 2. Start the services
 
 ```bash
-# Check container status
-docker ps | grep antd-mcp-server
-
-# View logs
-docker compose logs antd-mcp
-
-# Test the server
-docker exec -i antd-mcp-server sh -c "test -d /app/data && echo '✅ Server ready'"
+docker compose up -d
+docker compose ps
 ```
 
-### 3. Configure Cursor
-
-Edit `~/.cursor/mcp.json` (create if it doesn't exist):
-
-```json
-{
-  "mcpServers": {
-    "antd-components": {
-      "command": "docker",
-      "args": ["exec", "-i", "antd-mcp-server", "npm", "start"]
-    }
-  }
-}
-```
-
-### 4. Restart Cursor
-
-Restart Cursor IDE to load the MCP server.
-
-## Managing the Service
+Or start a subset:
 
 ```bash
-# Start the service
-docker compose up -d antd-mcp
-
-# Stop the service
-docker compose stop antd-mcp
-
-# Restart the service
-docker compose restart antd-mcp
-
-# View logs
-docker compose logs -f antd-mcp
-
-# Remove the container (keeps the image)
-docker compose down antd-mcp
+docker compose up -d context7-mcp grafana-mcp
 ```
 
-## Important Notes
+## 3. Verify each one starts and responds
 
-- **MCP uses stdio**: The MCP protocol communicates via standard input/output, not HTTP
-- **Persistent container**: The container runs in the background and Cursor connects to it via `docker exec`
-- **Port 10000**: Exposed but not used for MCP communication (stdio is used instead)
-- **Auto-restart**: The container will automatically restart if it stops (unless you stop it manually)
+```bash
+docker exec -i context7-mcp-server node dist/index.js &
+docker exec -i grafana-mcp-server /app/mcp-grafana --transport stdio &
+docker exec -i mongodb-mcp-server mongodb-mcp-server &
+docker exec -i sonarqube-mcp-server java -jar /app/sonarqube-mcp-server.jar &
+docker exec -i playwright-mcp-server node /app/cli.js --headless --browser chromium --no-sandbox &
+```
+
+Each should sit there waiting on stdio rather than exiting immediately —
+an immediate exit usually means a bad env var or unreachable URL. Kill
+them once confirmed (`kill %1 %2 %3 %4 %5`); the real connection happens
+through the MCP client, not this manual check.
+
+## 4. Configure Cursor / Claude Code
+
+See [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md) for the full `mcp.json`
+/ `claude mcp add` configuration for all five servers.
+
+## Managing the services
+
+```bash
+docker compose up -d               # start everything
+docker compose stop                # stop everything
+docker compose restart <service>   # restart one service
+docker compose logs -f <service>   # tail logs
+docker compose pull <service>      # update to the latest pinned digest's image
+```
 
 ## Troubleshooting
 
 ### Container won't start
 ```bash
-# Check logs
-docker compose logs antd-mcp
-
-# Rebuild if needed
-docker compose build --no-cache antd-mcp
+docker compose logs <service>
 ```
+Usually a missing/incorrect value in that service's `.env`.
 
-### Cursor can't connect
-- Make sure the container is running: `docker ps | grep antd-mcp`
-- Check the container name matches: `antd-mcp-server`
-- Verify Docker is accessible from Cursor
-
-### Rebuild after changes
-```bash
-docker compose down antd-mcp
-docker compose build --no-cache antd-mcp
-docker compose up -d antd-mcp
-```
+### Cursor / Claude Code can't connect
+- Confirm the container is running: `docker compose ps`
+- Confirm the container name matches what's in `mcp.json` /
+  `claude mcp list` (e.g. `context7-mcp-server`, `grafana-mcp-server`, …)
+- Restart Cursor / Claude Code after editing `mcp.json`

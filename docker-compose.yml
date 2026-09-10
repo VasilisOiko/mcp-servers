@@ -1,29 +1,61 @@
 services:
-  antd-mcp:
-    build:
-      context: ./antd-mcp
-      dockerfile: Dockerfile
-    image: antd-mcp-server
-    container_name: antd-mcp-server
-    ports:
-      - "10000:3000"
+  context7-mcp:
+    image: mcp/context7@sha256:1174e6a29634a83b2be93ac1fefabf63265f498c02c72201fe3464e687dd8836
+    container_name: context7-mcp-server
+    environment:
+      - MCP_TRANSPORT=stdio
     stdin_open: true
     tty: true
     restart: unless-stopped
-    # MCP servers use stdio, so we keep stdin/stdout open
-    # Data is included in the image, but you can override with a volume if needed:
-    # volumes:
-    #   - ./antd-data:/app/data
 
-  bullmq-mcp:
-    build:
-      context: ./bullmq-mcp
-      dockerfile: Dockerfile
-    image: bullmq-mcp-server
-    container_name: bullmq-mcp-server
-    ports:
-      - "10001:3000"
+  grafana-mcp:
+    image: mcp/grafana@sha256:a91519a83ede741a287eab366da14b3e31ec7c2cd9c40c2beecf8e01ed46ebf0
+    container_name: grafana-mcp-server
+    env_file:
+      - ./grafana-mcp/.env
+    environment:
+      - GRAFANA_URL=https://grafana.billys.gr:3001/
     stdin_open: true
     tty: true
     restart: unless-stopped
-    # MCP servers use stdio, so we keep stdin/stdout open
+
+  mongodb-mcp:
+    image: mcp/mongodb@sha256:83a7738e376ced6c5489ae5038df988f6cc237c73b322fc8d376836e61ccc24a
+    container_name: mongodb-mcp-server
+    env_file:
+      - ./mongodb-mcp/.env
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  sonarqube-mcp:
+    image: mcp/sonarqube@sha256:893d7d447bb94390e23617b98c57538c5d41ed92318e554889a3e355622f7688
+    container_name: sonarqube-mcp-server
+    env_file:
+      - ./sonarqube-mcp/.env
+    environment:
+      - SONARQUBE_URL=http://host.docker.internal:9000
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  playwright-mcp:
+    image: mcp/playwright@sha256:cde0813c418719d9019a1312c712f162c4abab45361245b4625ef29b977cce69
+    container_name: playwright-mcp-server
+    env_file:
+      - ./playwright-mcp/.env
+    # Pin output/profile dirs inside the container's own writable home.
+    # Without this, the server derives them from the MCP client's "roots"
+    # capability (the host's project path, e.g. /Users/...), which the
+    # non-root `node` user in this container can't create at its filesystem
+    # root.
+    command: ["--output-dir=/home/node/output", "--user-data-dir=/home/node/profile"]
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    extra_hosts:
+      # host.docker.internal is provided by Docker Desktop on Mac.
+      # This second alias durably resolves to the host machine too, giving a
+      # second origin for a second logged-in session (multi-user login
+      # testing), and survives container recreation.
+      - "app-user-b.local:host-gateway"

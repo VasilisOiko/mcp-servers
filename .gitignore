@@ -1,5 +1,11 @@
 node_modules/
 *.log
 .DS_Store
-antd-data/
 data/
+
+# Per-service MCP secrets (real values live only in these gitignored files;
+# each service's .env.example documents what's required)
+grafana-mcp/.env
+mongodb-mcp/.env
+sonarqube-mcp/.env
+playwright-mcp/.env
